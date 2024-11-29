@@ -1,0 +1,6 @@
+# Mac files
+.DS_Store
+
+# IDE-Specific files
+.nova/
+.vscode/
