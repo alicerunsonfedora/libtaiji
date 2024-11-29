@@ -4,3 +4,4 @@
 # IDE-Specific files
 .nova/
 .vscode/
+.luarc.json
