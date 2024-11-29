@@ -1,5 +1,5 @@
 local tcontains = require("labyrinth.collections").contains
-local models = require("models")
+local models = require("libtaiji.models")
 
 local TS = models.TileState
 
@@ -52,10 +52,17 @@ function navigation.getNeighbors(index, pzl)
     local tDown = navigation.coordToIndex(down, width, tileCount)
 
     local allNeighbors = {}
-    if tUp and pzl.tiles[tUp].state ~= TS.kInvisible then allNeighbors["up"] = tUp end
-    if tLeft and pzl.tiles[tLeft].state ~= TS.kInvisible then allNeighbors["left"] = tLeft end
-    if tRight and pzl.tiles[tRight].state ~= TS.kInvisible then allNeighbors["right"] = tRight end
-    if tDown and pzl.tiles[tDown].state ~= TS.kInvisible then allNeighbors["down"] = tDown end
+    if tUp ~= -1 and pzl.tiles[tUp].state ~= TS.kInvisible then
+        allNeighbors["up"] = tUp
+    end
+    if tLeft ~= -1 and pzl.tiles[tLeft].state ~= TS.kInvisible then
+        allNeighbors["left"] = tLeft
+    end
+    if tRight ~= -1 and pzl.tiles[tRight].state ~= TS.kInvisible
+        then allNeighbors["right"] = tRight
+    end
+    if tDown ~= -1 and pzl.tiles[tDown].state ~= TS.kInvisible then
+        allNeighbors["down"] = tDown end
     return allNeighbors
 end
 

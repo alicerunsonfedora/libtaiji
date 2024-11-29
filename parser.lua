@@ -1,4 +1,4 @@
-local models = require("models")
+local models = require("libtaiji.models")
 local coll = require("labyrinth.collections")
 local strutils = require("labyrinth.strutils")
 
@@ -59,7 +59,9 @@ local colorMapping = {
 
 local function luaver()
     local ver = { major = 5, minor = 0 }
-    ver.major, ver.minor = string.match(_VERSION, "Lua (%d).(%d)")
+    local major, minor = string.match(_VERSION, "Lua (%d).(%d)")
+    ver.major = tonumber(major)
+    ver.minor = tonumber(minor)
     return ver
 end
 
@@ -90,6 +92,7 @@ local function parse(code, generateRenderData)
     for i=1, #code do
         local char = charAt(code, i)
         if tcontains(d.digits, char) and (state == s.kInitial or state == s.kGetWidth) then
+            if state == s.kInitial then state = s.kGetWidth end
             rowWidth.str = rowWidth.str .. char
         elseif char == ":" and state == s.kGetWidth then
             local converted = tonumber(rowWidth.str)
@@ -110,7 +113,7 @@ local function parse(code, generateRenderData)
             if filledSymbolicTile then
                 fillIndex = fillIndex - 1
             end
-            local tState = state == s.kPrefillFixed and TileState.kFixed or TileState.kNormal
+            local tState = state == s.kPrefillFixed and TileState.kInvisible or TileState.kNormal
             for _=1, fillIndex do
                 local rData = generateRenderData(false, tState, nil, 0)
                 local tile = {
@@ -165,7 +168,7 @@ local function parse(code, generateRenderData)
             }
             tiles[#tiles + 1] = tile
             lookahead(i)
-            if supportBitmask then mechanics = mechanics | PBitmask.Flowers end
+            if supportBitmask then mechanics = mechanics | PBitmask.Flower end
             filledSymbolicTile = true
         elseif (char == d.dash or char == d.slash) and state == s.kWaitForInstruction then
             state = s.kFillSlashdash

@@ -1,9 +1,9 @@
 local coll = require("labyrinth.collections")
 local vec = require("labyrinth.vector")
 
-local models = require("models")
-local nav = require("navigation")
-local hashVecTbl = require("hasher")
+local models = require("libtaiji.models")
+local nav = require("libtaiji.navigation")
+local hashVecTbl = require("libtaiji.hasher")
 
 local tcontains = coll.contains
 local allSatisfy = coll.allSatisfy
@@ -49,12 +49,53 @@ end
 --- @return boolean
 local function simpleDiamondCheck(regionMap, symbolLUT)
     local diamondCounts = {}
+    if not symbolLUT[SymbolLUTKey.kDiamond] then return true end
     for _,diamond in pairs(symbolLUT[SymbolLUTKey.kDiamond]) do
         local diamondRegion = regionMap[diamond]
         if not diamondCounts[diamondRegion] then diamondCounts[diamondRegion] = 0 end
         diamondCounts[diamondRegion] = diamondCounts[diamondRegion] + 1
     end
     return allSatisfy(diamondCounts, function (d) return d == 2 end)
+end
+
+--- @param symbolLUT table
+--- @param regionMap table
+--- @param totalRegions number
+--- @param pzl Puzzle
+--- @return boolean
+local function dotConstraintsSatisfied(symbolLUT, regionMap, totalRegions, pzl)
+    local regionSizes = {}
+    if not symbolLUT[SymbolLUTKey.kDotPlus] then return true end
+    for _,dot in pairs(symbolLUT[SymbolLUTKey.kDotPlus]) do
+        local tile = pzl.tiles[dot]
+        local region = regionMap[dot]
+        if regionSizes[region] == nil then regionSizes[region] = 0 end
+        regionSizes[region] = regionSizes[region] + (tile.symbolValue or 0)
+    end
+
+    if symbolLUT[SymbolLUTKey.kDotMinus] then
+        for _,dot in pairs(symbolLUT[SymbolLUTKey.kDotMinus]) do
+            local tile = pzl.tiles[dot]
+            local region = regionMap[dot]
+            if regionSizes[region] == nil then regionSizes[region] = 0 end
+            regionSizes[region] = regionSizes[region] - (tile.symbolValue or 0)
+        end
+    end
+
+    local trueRegionSizes = {}
+    for _,region in pairs(regionMap) do
+        if trueRegionSizes[region] == nil then trueRegionSizes[region] = 0 end
+        trueRegionSizes[region] = trueRegionSizes[region] + 1
+    end
+
+    for i=1,totalRegions do
+        local expectedSize = regionSizes[i] or 0
+        local actualSize = trueRegionSizes[i] or 0
+        if expectedSize ~= 0 and actualSize ~= expectedSize then
+            return false
+        end
+    end
+    return true
 end
 
 --- @param lhs table<unknown, Vector>
@@ -141,44 +182,22 @@ local function checkPuzzleBoard(pzl)
     end
 
     -- Second pass: check that all constraints have been satisfied.
-    local flowersSatisfied = allSatisfy(symbolLUT[SymbolLUTKey.kFlower], function (t)
-        return flowerConstraintsSatisfied(t, pzl)
-    end)
-    if not flowersSatisfied then return false end
+    if symbolLUT[SymbolLUTKey.kFlower] then
+        local flowersSatisfied = allSatisfy(symbolLUT[SymbolLUTKey.kFlower], function (t)
+            return flowerConstraintsSatisfied(t, pzl)
+        end)
+        if not flowersSatisfied then return false end
+    end
 
     -- TODO: Check color rules in the future (gate behind an option flag).
     if not simpleDiamondCheck(regionMap, symbolLUT) then return false end
 
-    local regionSizes = {}
-    for _,dot in pairs(symbolLUT[SymbolLUTKey.kDotPlus]) do
-        local tile = pzl.tiles[dot]
-        local region = regionMap[dot]
-        if regionSizes[region] == nil then regionSizes[region] = 0 end
-        regionSizes[region] = regionSizes[region] + (tile.symbolValue or 0)
-    end
-    for _,dot in pairs(symbolLUT[SymbolLUTKey.kDotMinus]) do
-        local tile = pzl.tiles[dot]
-        local region = regionMap[dot]
-        if regionSizes[region] == nil then regionSizes[region] = 0 end
-        regionSizes[region] = regionSizes[region] - (tile.symbolValue or 0)
-    end
-
-    local trueRegionSizes = {}
-    for _,region in pairs(regionMap) do
-        if trueRegionSizes[region] == nil then trueRegionSizes[region] = 0 end
-        trueRegionSizes[region] = trueRegionSizes[region] + 1
-    end
-
-    for i=1,totalRegions do
-        local expectedSize = regionSizes[i] or 0
-        local actualSize = trueRegionSizes[i] or 0
-        if expectedSize ~= 0 and actualSize ~= expectedSize then
-            return false
-        end
+    if not dotConstraintsSatisfied(symbolLUT, regionMap, totalRegions, pzl) then
+        return false
     end
 
     local slashdashes = symbolLUT[SymbolLUTKey.kSlashdash]
-    if #slashdashes > 0 then
+    if slashdashes ~= nil and #slashdashes > 0 then
         local slashdashRegions = map(slashdashes, function (s) return regionMap[s] end)
         local regionShapes = {}
         local currentShapeRegion = {}
