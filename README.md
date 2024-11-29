@@ -71,3 +71,4 @@ If the constraints have been satified, the checker will return true.
 ## License
 
 libtaiji is licensed under the MIT License. You can learn more by reading
+the LICENSE.txt file.
